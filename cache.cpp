@@ -12,17 +12,28 @@ enum  operation {R,W};
 
 using CacheLineMeta = tuple<int, CacheState, int>;
 
+struct Bits {
+    int tag_bits;
+    int index_bits;
+    int offset_bits;
+};
+
 class Cache {
 public:
     vector<vector<CacheLineMeta>> tag_array;
-
     vector<vector<vector<int>>> data_array;
-
+    int num_sets;
+    int assosciativity;
+    int offset_bits;
+    int blocksize_in_bytes;
     // Constructor
     Cache(int num_sets, int num_ways, int line_size_bytes) {
         tag_array.resize(num_sets, vector<CacheLineMeta>(num_ways, { -1, CacheState::I, -1 }));
-
         data_array.resize(num_sets, vector<vector<int>>(num_ways, vector<int>(line_size_bytes, 0)));
+        num_sets = num_sets;
+        assosciativity = num_ways;
+        offset_bits = line_size_bytes;
+        blocksize_in_bytes = (1<<line_size_bytes);
     }
 
     // Optional: pretty-print the state (helper)
@@ -85,4 +96,14 @@ public:
     
 
 
+    struct Bits parse(string address) {
+        // Convert hexadecimal string to integer
+        unsigned long addr = stoul(address, nullptr, 16);
+        
+        // TODO: Parse the address into tag, index, and offset bits
+        
+        // Placeholder return - replace with actual parsed values
+        return {0, 0, 0};
+    }
+    
 };
