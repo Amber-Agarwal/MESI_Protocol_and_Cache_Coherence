@@ -4,6 +4,7 @@
 #include <fstream>
 #include <sstream>
 #include <iomanip>
+#include <bitset>
 
 using namespace std;
 
@@ -24,17 +25,19 @@ public:
     vector<vector<CacheLineMeta>> tag_array;
     vector<vector<vector<int>>> data_array;
     int num_sets;
+    int set_bits;
     int assosciativity;
     int offset_bits;
     int blocksize_in_bytes;
     // Constructor
-    Cache(int num_sets, int num_ways, int line_size_bytes) {
-        tag_array.resize(num_sets, vector<CacheLineMeta>(num_ways, { -1, CacheState::I, -1 }));
-        data_array.resize(num_sets, vector<vector<int>>(num_ways, vector<int>(line_size_bytes, 0)));
-        num_sets = num_sets;
+    Cache(int set_bits, int num_ways, int cache_line_bits) {
+        num_sets = (1<<set_bits);
+        this->set_bits = set_bits;
         assosciativity = num_ways;
-        offset_bits = line_size_bytes;
-        blocksize_in_bytes = (1<<line_size_bytes);
+        offset_bits = cache_line_bits;
+        blocksize_in_bytes = (1<<cache_line_bits);
+        tag_array.resize(num_sets, vector<CacheLineMeta>(num_ways, { -1, CacheState::I, -1 }));
+        data_array.resize(num_sets, vector<vector<int>>(num_ways, vector<int>(cache_line_bits, 0)));
     }
 
     // Optional: pretty-print the state (helper)
@@ -72,7 +75,7 @@ public:
             stringstream ss(line);
             char op_char;
             string hex_address;
-    
+
             ss >> op_char >> hex_address;
     
             operation op = (op_char == 'R') ? operation::R : operation::W;
@@ -109,11 +112,16 @@ public:
     struct Bits parse(string address) {
         // Convert hexadecimal string to integer
         unsigned long addr = stoul(address, nullptr, 16);
+        // Print address in binary format
         
-        // TODO: Parse the address into tag, index, and offset bits
-        
-        // Placeholder return - replace with actual parsed values
-        return {0, 0, 0};
+        struct Bits bits;
+        bits.offset_bits = addr & ((1 << offset_bits) - 1);
+        addr >>= offset_bits;
+        cout<<set_bits<<endl;
+        bits.index_bits = addr & ((1 << set_bits) - 1);
+        addr >>= set_bits;
+        bits.tag_bits = addr;
+        return bits;
     }
-    
 };
+  
