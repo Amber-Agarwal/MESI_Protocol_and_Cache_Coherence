@@ -1,10 +1,14 @@
 #include <iostream>
 #include <vector>
 #include <tuple>
+#include <fstream>
+#include <sstream>
+#include <iomanip>
 
 using namespace std;
 
-enum class CacheState { M, E, S, I };
+enum  CacheState { M, E, S, I };
+enum  operation {R,W};
 
 using CacheLineMeta = tuple<int, CacheState, int>;
 
@@ -43,4 +47,42 @@ public:
             cout << '\n';
         }
     }
+
+    void process_trace_file(const string& file_path, vector<pair<operation, string>>& trace_data) {
+        ifstream file(file_path);
+        if (!file.is_open()) {
+            cerr << "Error: Could not open file " << file_path << endl;
+            return;
+        }
+    
+        string line;
+        while (getline(file, line)) {
+            stringstream ss(line);
+            char op_char;
+            string hex_address;
+    
+            ss >> op_char >> hex_address;
+    
+            operation op = (op_char == 'R') ? operation::R : operation::W;
+    
+            if (hex_address.length() < 8) {
+                hex_address = string(8 - hex_address.length(), '0') + hex_address;
+            }
+    
+            trace_data.emplace_back(op, hex_address);
+        }
+    
+        file.close();
+
+    }
+
+    operation hit_or_miss (struct )
+
+
+
+
+
+    
+
+
 };
