@@ -9,6 +9,7 @@ using namespace std;
 
 enum  CacheState { M, E, S, I };
 enum  operation {R,W};
+enum miss_or_hit {HIT,MISS};
 
 using CacheLineMeta = tuple<int, CacheState, int>;
 
@@ -87,14 +88,23 @@ public:
 
     }
 
-    operation hit_or_miss (struct )
+    miss_or_hit hit_or_miss(struct Bits cache_bits) {
+        int index = cache_bits.index_bits;
+        int tag = cache_bits.tag_bits;
 
+        if (index >= num_sets) {
+            cerr << "Error: Index out of bounds." << endl;
+            return miss_or_hit::MISS;
+        }
 
+        for (auto& [stored_tag, state, ts] : tag_array[index]) {
+            if (stored_tag == tag && state != CacheState::I) {
+                return miss_or_hit::HIT;
+            }
+        }
 
-
-
-    
-
+        return miss_or_hit::MISS;
+    }
 
     struct Bits parse(string address) {
         // Convert hexadecimal string to integer
