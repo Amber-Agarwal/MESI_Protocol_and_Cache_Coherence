@@ -29,6 +29,8 @@ public:
     int assosciativity;
     int offset_bits;
     int blocksize_in_bytes;
+    bool stall_flag = false;
+    int current_instruction_number = 0;
     // Constructor
     Cache(int set_bits, int num_ways, int cache_line_bits) {
         num_sets = (1<<set_bits);
