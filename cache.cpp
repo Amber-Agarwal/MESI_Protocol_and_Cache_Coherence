@@ -46,6 +46,9 @@ public:
     int blocksize_in_bytes;
     bool stall_flag = false;
     int current_instruction_number = 0;
+    bool is_active = true;
+    int waiting_time = 0;
+    vector<pair<operation, string>> trace_data;
     // Constructor
     Cache(int set_bits, int num_ways, int cache_line_bits,string filepath) {
         num_sets = (1<<set_bits);
@@ -55,6 +58,7 @@ public:
         blocksize_in_bytes = (1<<cache_line_bits);
         tag_array.resize(num_sets, vector<CacheLineMeta>(num_ways, { -1, CacheState::I, -1 }));
         data_array.resize(num_sets, vector<vector<int>>(num_ways, vector<int>(cache_line_bits, 0)));
+        process_trace_file(filepath, trace_data);
     }
 
     // Optional: pretty-print the state (helper)
@@ -80,7 +84,7 @@ public:
         }
     }
 
-    void process_trace_file(const string& file_path, vector<pair<operation, string>>& trace_data) {
+    void process_trace_file(string file_path, vector<pair<operation, string>> &trace_data) {
         ifstream file(file_path);
         if (!file.is_open()) {
             cerr << "Error: Could not open file " << file_path << endl;
@@ -220,3 +224,7 @@ int main(int argc, char* argv[]) {
     
     return 0;
 }
+
+    
+
+
