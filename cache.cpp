@@ -14,6 +14,19 @@ enum miss_or_hit {HIT,MISS};
 
 using CacheLineMeta = tuple<int, CacheState, int>;
 
+struct Statictics {
+    int instructions;
+    int reads;
+    int writes;
+    int execution_cycles;
+    int idle_cycles;
+    int cache_misses;
+    float cache_miss_rate;
+    int cache_evictions;
+    int write_back;
+    int bus_invalidations;
+    int bus_write_back;
+};
 struct Bits {
     int tag_bits;
     int index_bits;
@@ -24,6 +37,7 @@ class Cache {
 public:
     vector<vector<CacheLineMeta>> tag_array;
     vector<vector<vector<int>>> data_array;
+    public: Statictics stats;
     int num_sets;
     int set_bits;
     int assosciativity;
@@ -127,3 +141,5 @@ public:
     }
 };
   
+
+
