@@ -27,13 +27,7 @@ struct Statistics {
     int cache_evictions = 0;
     int write_back = 0;
     int bus_invalidations = 0;
-    int bus_write_back = 0;
-    int read_misses = 0;
-    int write_misses = 0;
-    int cache_to_cache_transfers = 0;
-    int memory_transactions = 0;
-    int interventions = 0;
-    int flushes = 0;
+    int data_traffic_in_bytes = 0;
 };
 
 struct Bits {
@@ -48,10 +42,12 @@ struct Bus {
     int source_cache = -1;
     int target_cache = -1;
     string address;
-    bool shared_line = false;
     bool invalidation = false;
-    bool write_back = false;
-    operation op_type;
+    CacheState set_state;
+
+    int transactions=0;
+    int traffic=0;
+
 };
 
 class Cache {
@@ -184,7 +180,6 @@ public:
 
     // Find a way to replace (either empty or LRU)
     int find_replacement_way(int index) {
-        // First try to find an invalid line
         for (int i = 0; i < associativity; i++) {
             auto& [stored_tag, state, ts] = tag_array[index][i];
             if (state == CacheState::I) {
@@ -192,7 +187,6 @@ public:
             }
         }
 
-        // If no invalid line, use LRU
         int replace_idx = 0;
         int min_ts = INT_MAX;
         
@@ -214,16 +208,19 @@ public:
         int way = find_way(index, tag);
         
         if (way != -1) {
-            // Update timestamp for LRU
             update_timestamp(index, way, current_instruction_number);
+        }else {
+            cerr << "Error: Way not found in read_hit" << endl;
+            return;
         }
         
-        stats.reads++;
         stats.instructions++;
+        stats.reads++;
         stats.execution_cycles++;
     }
 
     void write_hit(const string& address, Bus& bus, vector<Cache*>& caches) {
+        stall_flag = false;
         Bits bits = parse(address);
         int index = bits.index_bits;
         int tag = bits.tag_bits;
@@ -236,46 +233,48 @@ public:
         
         auto& [stored_tag, state, ts] = tag_array[index][way];
         
-        // Update timestamp for LRU
         update_timestamp(index, way, current_instruction_number);
         
         if (state == CacheState::M || state == CacheState::E) {
-            // Already exclusive or modified - just update state to M
             tag_array[index][way] = make_tuple(tag, CacheState::M, current_instruction_number);
-            stats.writes++;
             stats.instructions++;
+            stats.writes++;
             stats.execution_cycles++;
-        } else if (state == CacheState::S) {
-            // Shared state, need to invalidate other caches
+        }else if (state == CacheState::S) {
             if (bus.busy) {
+                stats.idle_cycles++;
                 stall_flag = true;
                 return;
             }
-            ///@@@@ changes
-            // Broadcast invalidate
             bus.busy = true;
-            bus.cycle_remaining = 2; // 2 cycles for bus transaction
-            bus.source_cache = cache_id;
-            bus.target_cache = -1;
+            bus.cycle_remaining = 1; 
+            bus.target_cache = cache_id;
             bus.address = address;
             bus.invalidation = true;
-            bus.op_type = operation::W;
-            
-            // Set this cache as waiting
-            is_active = false;
-            waiting_time = 2;
-            
-            stats.writes++;
+            for (auto& cache : caches) {
+                if (cache->cache_id != cache_id) {
+                    int other_way = cache->find_way(index, tag);
+                    if (other_way != -1) {
+                        auto& [other_stored_tag, other_state, other_ts] = cache->tag_array[index][other_way];                 
+                        cache->tag_array[index][other_way] = make_tuple(other_stored_tag, CacheState::I, other_ts);
+                    }
+                }
+            }
+            bus.transactions++;
             stats.instructions++;
+            stats.writes++;
             stats.execution_cycles++;
-            
-            // Will transition to M when bus operation completes
+            stats.bus_invalidations++;
+        }else{
+            cerr << "Error: Invalid state in write_hit" << endl;
+            return;
         }
     }
 
     void read_miss(const string& address, Bus& bus, vector<Cache*>& caches) {
         if (bus.busy) {
             stall_flag = true;
+            stats.idle_cycles++;
             return;
         }
         
@@ -286,7 +285,7 @@ public:
         // Check if another cache has this data
         bool shared = false;
         int source_cache = -1;
-        
+        bool writing_back = false;
         for (int i = 0; i < caches.size(); i++) {
             if (i == cache_id) continue;
             
@@ -295,45 +294,60 @@ public:
             
             if (other_way != -1) {
                 auto& [stored_tag, state, ts] = other_cache->tag_array[index][other_way];
-                ///@@@write back on M state
-                if (state == CacheState::M || state == CacheState::E || state == CacheState::S) {
-                    shared = true;
-                    if (state == CacheState::M || state == CacheState::E) {
-                        source_cache = i;
-                    }
+                if(state == CacheState::I) {
+                    continue; // Invalid state, skip
+                }
+                shared = true;
+                source_cache = i;
+                other_cache->tag_array[index][other_way] = make_tuple(stored_tag, CacheState::S, ts);
+                if (state == CacheState::M) {
+                    writing_back = true;
                 }
             }
         }
         
         // Start bus transaction
         bus.busy = true;
-        bus.cycle_remaining = (source_cache >= 0) ? 2 : 100; // 2 cycles if from cache, 100 if from memory
-        bus.source_cache = source_cache;
         bus.target_cache = cache_id;
         bus.address = address;
-        bus.shared_line = shared;
         bus.invalidation = false;
-        bus.op_type = operation::R;
         
         // Set this cache as waiting
         is_active = false;
-        waiting_time = bus.cycle_remaining;
-        
-        stats.reads++;
-        stats.read_misses++;
-        stats.cache_misses++;
-        stats.instructions++;
-        
-        if (source_cache >= 0) {
-            stats.cache_to_cache_transfers++;
+        bus.set_state = CacheState::S;
+        if (writing_back) {
+            bus.cycle_remaining = blocksize_in_bytes/2 + 100; // 
+            waiting_time = blocksize_in_bytes/2;
+            bus.traffic += 2*blocksize_in_bytes;
+            bus.transactions+=2;
+            caches[source_cache]->stats.data_traffic_in_bytes += 2*blocksize_in_bytes;
+            caches[source_cache]->stats.write_back++;
+        } else if (shared) {
+            bus.cycle_remaining = blocksize_in_bytes/2; // 1 cycle for read
+            waiting_time = blocksize_in_bytes/2;
+            bus.traffic += blocksize_in_bytes;
+            bus.transactions++;
+            caches[source_cache]->stats.data_traffic_in_bytes += blocksize_in_bytes;
+            caches[source_cache]->stats.write_back++;
         } else {
-            stats.memory_transactions++;
+            bus.set_state = CacheState::E;
+            bus.cycle_remaining = 100;
+            waiting_time = 100;
+            bus.traffic += blocksize_in_bytes;
+            bus.transactions++;
         }
+        
+        stats.instructions++;
+        stats.reads++;
+        stats.execution_cycles++;
+        stats.cache_misses++;
+        stats.data_traffic_in_bytes += blocksize_in_bytes;
     }
 
     void write_miss(const string& address, Bus& bus, vector<Cache*>& caches) {
         if (bus.busy) {
             stall_flag = true;
+            stats.idle_cycles++;
             return;
         }
         
@@ -341,9 +355,7 @@ public:
         int index = bits.index_bits;
         int tag = bits.tag_bits;
         
-        // Check if another cache has this data (needs to be invalidated)
-        bool found_in_other_cache = false;
-        
+        bool writing_back = false;
         for (int i = 0; i < caches.size(); i++) {
             if (i == cache_id) continue;
             
@@ -351,135 +363,86 @@ public:
             int other_way = other_cache->find_way(index, tag);
             
             if (other_way != -1) {
-                found_in_other_cache = true;
-                break;
+                auto& [stored_tag, state, ts] = other_cache->tag_array[index][other_way];
+                if (state == CacheState::I) {
+                    continue; // Invalid state, skip
+                }
+                other_cache->tag_array[index][other_way] = make_tuple(stored_tag, CacheState::I, ts);
+                if (state == CacheState::M) {
+                    writing_back = true;
+                }
             }
         }
         
         // Start bus transaction
         bus.busy = true;
-        bus.cycle_remaining = 100; // 100 cycles for memory access
-        bus.source_cache = -1;
         bus.target_cache = cache_id;
         bus.address = address;
-        bus.invalidation = true; // We need to invalidate copies in other caches
-        bus.op_type = operation::W;
         
         // Set this cache as waiting
         is_active = false;
-        waiting_time = 100;
-        
-        stats.writes++;
-        stats.write_misses++;
-        stats.cache_misses++;
-        stats.instructions++;
-        stats.memory_transactions++;
-        
-        if (found_in_other_cache) {
-            bus.cycle_remaining += 2; // Additional cycles for invalidation
-            waiting_time += 2;
+        bus.set_state = CacheState::M;
+        if(writing_back) {
+            bus.cycle_remaining = 200; // 2 cycles for write
+            waiting_time = 200;
+            bus.traffic += 2 * blocksize_in_bytes;
+            bus.transactions += 2;
+            caches[bus.target_cache]->stats.data_traffic_in_bytes +=  blocksize_in_bytes;
+            caches[bus.target_cache]->stats.write_back++;
+        } else{
+            bus.cycle_remaining = 100;
+            waiting_time = 100;
+            bus.traffic += blocksize_in_bytes;
+            bus.transactions++;
         }
+        
+        
+        stats.instructions++;
+        stats.writes++;
+        stats.cache_misses++;
+        stats.data_traffic_in_bytes += blocksize_in_bytes;
+        stats.execution_cycles++;
     }
 
     void handle_bus_transaction_completion(Bus& bus, vector<Cache*>& caches) {
         Bits bits = parse(bus.address);
         int index = bits.index_bits;
         int tag = bits.tag_bits;
-        
-        // Find a free line or evict LRU
+
+        bus.busy = false;
+        bus.cycle_remaining = 0;
+
         int replace_way = find_replacement_way(index);
         auto& [old_tag, old_state, old_ts] = tag_array[index][replace_way];
         
-        // Handle eviction if necessary
-        if (old_state == CacheState::M) {
-            stats.write_back++;
-            stats.cache_evictions++;
-            stats.flushes++;
-            //@@@@ we think bus should be busy
-        } else if (old_state != CacheState::I) {
-            stats.cache_evictions++;
-        }
-        
-        // Update the cache line based on the operation
-        if (bus.op_type == operation::W) {
-            // Write miss/hit that caused invalidation - set to M
-            tag_array[index][replace_way] = make_tuple(tag, CacheState::M, current_instruction_number);
-        } else { // Read miss
-            if (bus.shared_line) {
-                // Data is in other caches, set to S
-                tag_array[index][replace_way] = make_tuple(tag, CacheState::S, current_instruction_number);
-            } else {
-                // Data is not in other caches, set to E
-                tag_array[index][replace_way] = make_tuple(tag, CacheState::E, current_instruction_number);
-            }
-        }
-        
         // Complete the state transition for write_hit on Shared state
-        if (bus.invalidation && bus.source_cache == cache_id) {
+        if (bus.invalidation) {
             int way = find_way(index, tag);
-            if (way != -1 && way != replace_way) {
+            if (way != -1) {
                 auto& [stored_tag, state, ts] = tag_array[index][way];
                 if (state == CacheState::S) {
-                    // Complete the transition to M
                     tag_array[index][way] = make_tuple(tag, CacheState::M, current_instruction_number);
+                    return;
+                }else{
+                    cerr << "Error: state should have been S when issuing invalidate" << endl;
+                    return;
                 }
+            }else{
+                cerr << "Error: Way not found in handle_bus_transaction_completion" << endl;
+                return;
             }
         }
+
+        tag_array[index][replace_way] = make_tuple(tag, bus.set_state, current_instruction_number);
     }
 
-    void handle_snoop(const string& address, Bus& bus, vector<Cache*>& caches) {
-        Bits bits = parse(address);
-        int index = bits.index_bits;
-        int tag = bits.tag_bits;
-        int way = find_way(index, tag);
-        
-        if (way == -1) return; // Not in this cache
-        
-        auto& [stored_tag, state, ts] = tag_array[index][way];
-        
-        if (bus.invalidation) {
-            // Invalidation request (caused by write)
-            if (state == CacheState::M) {
-                // Need to write back modified data
-                stats.bus_write_back++;
-                stats.write_back++;
-            }
-            
-            // Track intervention if this cache needs to supply data
-            if (state != CacheState::I) {
-                stats.interventions++;
-                stats.bus_invalidations++;
-            }
-            
-            // Invalidate the line
-            tag_array[index][way] = make_tuple(stored_tag, CacheState::I, ts);
-        } else {
-            // Read request from another cache
-            if (state == CacheState::M) {
-                // Need to provide data and change to S
-                stats.interventions++;
-                stats.cache_to_cache_transfers++;
-                tag_array[index][way] = make_tuple(stored_tag, CacheState::S, ts);
-                bus.shared_line = true;
-            } else if (state == CacheState::E) {
-                // Need to provide data and change to S
-                stats.interventions++;
-                stats.cache_to_cache_transfers++;
-                tag_array[index][way] = make_tuple(stored_tag, CacheState::S, ts);
-                bus.shared_line = true;
-            } else if (state == CacheState::S) {
-                // Already shared, just set shared line
-                bus.shared_line = true;
-            }
-        }
-    }
 };
 
 int main(int argc, char* argv[]) {
     string tracefile = "default_trace.txt"; // Default trace file
-    int s = 2;                             // Default set index bits
-    int E = 5;                             // Default associativity
-    int b = 2;                             // Default block bits
+    int s = 6;                             // Default set index bits
+    int E = 2;                             // Default associativity
+    int b = 5;                             // Default block bits
     string outfilename = "default_output.txt"; // Default output file
 
     int opt;
@@ -545,10 +508,7 @@ int main(int argc, char* argv[]) {
                     caches[bus.target_cache]->is_active = true;
                 }
                 bus.busy = false;
-                bus.shared_line = false;
                 bus.invalidation = false;
-                bus.write_back = false;
-                bus.source_cache = -1;
                 bus.target_cache = -1;
             }
         }
@@ -571,13 +531,13 @@ int main(int argc, char* argv[]) {
                     if (result == miss_or_hit::HIT) {
                         if (op == operation::R) {
                             cache->read_hit(address, bus);
-                        } else { // operation::W
+                        } else { 
                             cache->write_hit(address, bus, caches);
                         }
-                    } else { // MISS
+                    } else {
                         if (op == operation::R) {
                             cache->read_miss(address, bus, caches);
-                        } else { // operation::W
+                        } else { 
                             cache->write_miss(address, bus, caches);
                         }
                     }
@@ -590,23 +550,12 @@ int main(int argc, char* argv[]) {
                     cache->waiting_time--;
                     if (cache->waiting_time <= 0) {
                         cache->is_active = true;
+                        cerr<<"it should not be here"<<endl;
                         cache->waiting_time = 0;
                     }
                 }
             }
             
-            // Process snooping for each cache
-            if (bus.busy) {
-                if (i != bus.target_cache && i != bus.source_cache) {
-                    cache->handle_snoop(bus.address, bus, caches);
-                }
-            }
-        }
-        
-        // Check for termination condition
-        if (cycle > 100000000) { // Safety limit
-            cout << "Reached maximum cycle limit" << endl;
-            break;
         }
     }
     
@@ -619,6 +568,8 @@ int main(int argc, char* argv[]) {
         }
     }
     
+    cout << "==================== SIMULATION STATISTICS =====================" << endl;
+    cout << "******** Program execution completed ******** in " << cycle << "cycles ********"<< endl;
     // Print statistics
     for (int i = 0; i < 4; i++) {
         Cache* cache = caches[i];
@@ -628,30 +579,40 @@ int main(int argc, char* argv[]) {
         }
         
         cout << "============ Simulation results (Cache " << i << ") ============" << endl;
-        cout << "01. number of reads:                   " << cache->stats.reads << endl;
-        cout << "02. number of read misses:             " << cache->stats.read_misses << endl;
+        cout << "01. number of instructions:            " << cache->stats.instructions << endl;
+        cout << "02. number of reads:                   " << cache->stats.reads << endl;
         cout << "03. number of writes:                  " << cache->stats.writes << endl;
-        cout << "04. number of write misses:            " << cache->stats.write_misses << endl;
-        cout << "05. total miss rate:                   " << fixed << setprecision(2) << miss_rate << '%' << endl;
-        cout << "06. number of write backs:             " << cache->stats.write_back << endl;
-        cout << "07. number of cache to cache transfers: " << cache->stats.cache_to_cache_transfers << endl;
-        cout << "08. number of memory transactions:      " << cache->stats.memory_transactions << endl;
-        cout << "09. number of interventions:            " << cache->stats.interventions << endl;
-        cout << "10. number of invalidations:            " << cache->stats.bus_invalidations << endl;
-        cout << "11. number of flushes:                  " << cache->stats.flushes << endl;
-        cout << "12. total execution cycles:             " << cache->stats.execution_cycles + cache->stats.idle_cycles << endl;
-        
+        cout << "04. number of execution cycles:        " << cache->stats.execution_cycles << endl;
+        cout << "05. number of idle cycles:             " << cache->stats.idle_cycles << endl;
+        cout << "06. number of cache misses:            " << cache->stats.cache_misses << endl;
+        cout << "07. cache miss rate:                   " << fixed << setprecision(2) << miss_rate << '%' << endl;
+        cout << "08. number of cache evictions:         " << cache->stats.cache_evictions << endl;
+        cout << "09. number of write backs:             " << cache->stats.write_back << endl;
+        cout << "10. number of invalidations:           " << cache->stats.bus_invalidations << endl;
+        cout << "11. data traffic in bytes:             " << cache->stats.data_traffic_in_bytes << endl;        
         // Write to output file if open
         if (outfile.is_open()) {
-            outfile << "Cache " << i << "," << cache->stats.reads << "," << cache->stats.read_misses << ","
-                    << cache->stats.writes << "," << cache->stats.write_misses << "," << miss_rate << ","
-                    << cache->stats.write_back << "," << cache->stats.cache_to_cache_transfers << ","
-                    << cache->stats.memory_transactions << "," << cache->stats.interventions << ","
-                    << cache->stats.bus_invalidations << "," << cache->stats.flushes << ","
-                    << cache->stats.execution_cycles + cache->stats.idle_cycles << endl;
+            // eventually write to the file
+            outfile << "Cache " << i << " Statistics:" << endl;
+            outfile << "01. number of instructions:            " << cache->stats.instructions << endl;
+            outfile << "02. number of reads:                   " << cache->stats.reads << endl;
+            outfile << "03. number of writes:                  " << cache->stats.writes << endl;
+            outfile << "04. number of execution cycles:        " << cache->stats.execution_cycles << endl;
+            outfile << "05. number of idle cycles:             " << cache->stats.idle_cycles << endl;
+            outfile << "06. number of cache misses:            " << cache->stats.cache_misses << endl;
+            outfile << "07. cache miss rate:                   " << fixed << setprecision(2) << miss_rate << '%' << endl;
+            outfile << "08. number of cache evictions:         " << cache->stats.cache_evictions << endl;
+            outfile << "09. number of write backs:             " << cache->stats.write_back << endl;
+            outfile << "10. number of invalidations:           " << cache->stats.bus_invalidations << endl;
+            outfile << "11. data traffic in bytes:             " << cache->stats.data_traffic_in_bytes << endl;
         }
     }
     
+    cout << "==================== BUS STATISTICS =============================" << endl;
+    cout << "01. number of transactions:            " << bus.transactions << endl;
+    cout << "02. data traffic in bytes:             " << bus.traffic << endl;
+
+
     if (outfile.is_open()) {
         outfile.close();
     }
