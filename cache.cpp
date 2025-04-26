@@ -411,7 +411,7 @@ public:
 
         bus.busy = false;
         bus.cycle_remaining = 0;
-
+        bus.target_cache=-1;
         // Complete the state transition for write_hit on Shared state
         if (bus.invalidation) {
             int way = find_way(index, tag);
@@ -437,12 +437,12 @@ public:
             stats.data_traffic_in_bytes += blocksize_in_bytes;
             bus.traffic += blocksize_in_bytes;
             bus.transactions++;
-            is_active = false;
             bus.cycle_remaining = 100;
-            bus.target_cache = -1;
             bus.address = bus.address;
             bus.invalidation = false;
             waiting_time = 0;
+            bus.busy=true;
+
         }
         tag_array[index][replace_way] = make_tuple(tag, bus.set_state, current_instruction_number);
         stats.cache_evictions++;
@@ -519,9 +519,6 @@ int main(int argc, char* argv[]) {
                     caches[bus.target_cache]->handle_bus_transaction_completion(bus, caches);
                     caches[bus.target_cache]->is_active = true;
                 }
-                bus.busy = false;
-                bus.invalidation = false;
-                bus.target_cache = -1;
             }
         }
         
