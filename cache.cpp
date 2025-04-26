@@ -412,9 +412,6 @@ public:
         bus.busy = false;
         bus.cycle_remaining = 0;
 
-        int replace_way = find_replacement_way(index);
-        auto& [old_tag, old_state, old_ts] = tag_array[index][replace_way];
-        
         // Complete the state transition for write_hit on Shared state
         if (bus.invalidation) {
             int way = find_way(index, tag);
@@ -432,8 +429,23 @@ public:
                 return;
             }
         }
-
+        
+        int replace_way = find_replacement_way(index);
+        auto& [old_tag, old_state, old_ts] = tag_array[index][replace_way];
+        if (old_state == CacheState::M) {
+            stats.write_back++;
+            stats.data_traffic_in_bytes += blocksize_in_bytes;
+            bus.traffic += blocksize_in_bytes;
+            bus.transactions++;
+            is_active = false;
+            bus.cycle_remaining = 100;
+            bus.target_cache = -1;
+            bus.address = bus.address;
+            bus.invalidation = false;
+            waiting_time = 0;
+        }
         tag_array[index][replace_way] = make_tuple(tag, bus.set_state, current_instruction_number);
+        stats.cache_evictions++;
     }
 
 };
