@@ -202,6 +202,7 @@ public:
     }
 
     void read_hit(const string& address, Bus& bus) {
+        bus.invalidation = false;
         Bits bits = parse(address);
         int index = bits.index_bits;
         int tag = bits.tag_bits;
@@ -221,6 +222,7 @@ public:
 
     void write_hit(const string& address, Bus& bus, vector<Cache*>& caches) {
         stall_flag = false;
+        bus.invalidation = false;
         Bits bits = parse(address);
         int index = bits.index_bits;
         int tag = bits.tag_bits;
@@ -272,6 +274,7 @@ public:
     }
 
     void read_miss(const string& address, Bus& bus, vector<Cache*>& caches) {
+        bus.invalidation = false;
         if (bus.busy) {
             stall_flag = true;
             stats.idle_cycles++;
@@ -345,6 +348,7 @@ public:
     }
 
     void write_miss(const string& address, Bus& bus, vector<Cache*>& caches) {
+        bus.invalidation = false;
         if (bus.busy) {
             stall_flag = true;
             stats.idle_cycles++;
@@ -411,7 +415,7 @@ public:
 
         bus.busy = false;
         bus.cycle_remaining = 0;
-        bus.target_cache=-1;
+        is_active = true;
         // Complete the state transition for write_hit on Shared state
         if (bus.invalidation) {
             int way = find_way(index, tag);
@@ -429,6 +433,7 @@ public:
                 return;
             }
         }
+        bus.target_cache=-1;
         
         int replace_way = find_replacement_way(index);
         auto& [old_tag, old_state, old_ts] = tag_array[index][replace_way];
@@ -517,7 +522,12 @@ int main(int argc, char* argv[]) {
                 // Bus transaction complete
                 if (bus.target_cache >= 0) {
                     caches[bus.target_cache]->handle_bus_transaction_completion(bus, caches);
-                    caches[bus.target_cache]->is_active = true;
+                }else{
+                    bus.busy = false;
+                    bus.cycle_remaining = 0;
+                    bus.target_cache = -1;
+                    bus.address = "";
+                    bus.invalidation = false;
                 }
             }
         }
@@ -563,6 +573,8 @@ int main(int argc, char* argv[]) {
                         cache->waiting_time = 0;
                     }
                 }
+            }else{
+                cache->stats.idle_cycles++;
             }
             
         }
