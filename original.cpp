@@ -47,11 +47,6 @@ struct Bus {
 
     int transactions=0;
     int traffic=0;
-
-    // Extend Bus struct to support multi-step transactions
-    enum TransactionType { NONE, CACHE_TO_CACHE, WRITE_BACK };
-    TransactionType transaction_type = NONE;
-    int pending_writeback_cache = -1; // which cache needs to write back after transfer
 };
 
 class Cache {
@@ -328,15 +323,12 @@ public:
         is_active = false;
         bus.set_state = CacheState::S;
         if (writing_back) {
-            // First, do cache-to-cache transfer
-            bus.cycle_remaining = blocksize_in_bytes/2;
+            bus.cycle_remaining = blocksize_in_bytes/2 + 100; // 
             waiting_time = blocksize_in_bytes/2;
-            bus.traffic += blocksize_in_bytes;
-            bus.transactions++;
-            caches[source_cache]->stats.data_traffic_in_bytes += blocksize_in_bytes;
-            // Set up for second transaction (write-back)
-            bus.transaction_type = Bus::CACHE_TO_CACHE;
-            bus.pending_writeback_cache = source_cache;
+            bus.traffic += 2*blocksize_in_bytes;
+            bus.transactions+=2;
+            caches[source_cache]->stats.data_traffic_in_bytes += 2*blocksize_in_bytes;
+            caches[source_cache]->stats.write_back++;
         } else if (shared) {
             bus.cycle_remaining = blocksize_in_bytes/2; // 1 cycle for read
             waiting_time = blocksize_in_bytes/2;
@@ -463,28 +455,6 @@ public:
             stats.cache_evictions++;
         }
         tag_array[index][replace_way] = make_tuple(tag, bus.set_state, current_instruction_number);
-
-        if (bus.transaction_type == Bus::CACHE_TO_CACHE) {
-            // Now schedule the write-back
-            bus.transaction_type = Bus::WRITE_BACK;
-            bus.cycle_remaining = 100; // Write-back to memory
-            bus.traffic += blocksize_in_bytes;
-            bus.transactions++;
-            caches[bus.pending_writeback_cache]->stats.data_traffic_in_bytes += blocksize_in_bytes;
-            caches[bus.pending_writeback_cache]->stats.write_back++;
-            // Keep bus busy for write-back
-            return;
-        } else if (bus.transaction_type == Bus::WRITE_BACK) {
-            // Write-back done, reset bus state
-            bus.transaction_type = Bus::NONE;
-            bus.pending_writeback_cache = -1;
-            bus.busy = false;
-            bus.cycle_remaining = 0;
-            bus.target_cache = -1;
-            bus.address = "";
-            bus.invalidation = false;
-            return;
-        }
     }
 
 };
