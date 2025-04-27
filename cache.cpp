@@ -10,7 +10,7 @@
 
 using namespace std;
 
-enum CacheState { M, E, S, I };
+enum CacheState { I,M, E, S };
 enum operation {R, W};
 enum miss_or_hit {HIT, MISS};
 
@@ -221,6 +221,7 @@ public:
     }
 
     void write_hit(const string& address, Bus& bus, vector<Cache*>& caches) {
+        
         stall_flag = false;
         bus.invalidation = false;
         Bits bits = parse(address);
@@ -250,6 +251,9 @@ public:
             }
             bus.busy = true;
             bus.cycle_remaining = 1; 
+            stall_flag = true;
+            is_active = false;
+            waiting_time=1;
             bus.target_cache = cache_id;
             bus.address = address;
             bus.invalidation = true;
@@ -274,6 +278,7 @@ public:
     }
 
     void read_miss(const string& address, Bus& bus, vector<Cache*>& caches) {
+        
         bus.invalidation = false;
         if (bus.busy) {
             stall_flag = true;
@@ -302,10 +307,10 @@ public:
                 }
                 shared = true;
                 source_cache = i;
-                other_cache->tag_array[index][other_way] = make_tuple(stored_tag, CacheState::S, ts);
                 if (state == CacheState::M) {
                     writing_back = true;
                 }
+                other_cache->tag_array[index][other_way] = make_tuple(stored_tag, CacheState::S, ts);
             }
         }
         
@@ -339,15 +344,14 @@ public:
             bus.traffic += blocksize_in_bytes;
             bus.transactions++;
         }
-        
-        stats.instructions++;
-        stats.reads++;
+        stats.data_traffic_in_bytes += blocksize_in_bytes;
         stats.execution_cycles++;
         stats.cache_misses++;
-        stats.data_traffic_in_bytes += blocksize_in_bytes;
+        stall_flag = true;
     }
 
     void write_miss(const string& address, Bus& bus, vector<Cache*>& caches) {
+        
         bus.invalidation = false;
         if (bus.busy) {
             stall_flag = true;
@@ -400,12 +404,10 @@ public:
             bus.transactions++;
         }
         
-        
-        stats.instructions++;
-        stats.writes++;
-        stats.cache_misses++;
         stats.data_traffic_in_bytes += blocksize_in_bytes;
+        stats.cache_misses++;
         stats.execution_cycles++;
+        stall_flag=true;
     }
 
     void handle_bus_transaction_completion(Bus& bus, vector<Cache*>& caches) {
@@ -437,6 +439,7 @@ public:
         
         int replace_way = find_replacement_way(index);
         auto& [old_tag, old_state, old_ts] = tag_array[index][replace_way];
+        
         if (old_state == CacheState::M) {
             stats.write_back++;
             stats.data_traffic_in_bytes += blocksize_in_bytes;
@@ -449,8 +452,10 @@ public:
             bus.busy=true;
 
         }
+        if (old_state != CacheState::I){
+            stats.cache_evictions++;
+        }
         tag_array[index][replace_way] = make_tuple(tag, bus.set_state, current_instruction_number);
-        stats.cache_evictions++;
     }
 
 };
@@ -549,15 +554,22 @@ int main(int argc, char* argv[]) {
                     
                     if (result == miss_or_hit::HIT) {
                         if (op == operation::R) {
-                            cache->read_hit(address, bus);
+                            cache->read_hit(address, bus );
+                            cout<<"Read hit in cache " << i << " in cycle " << cycle << endl;
                         } else { 
                             cache->write_hit(address, bus, caches);
+                            cout<<"write hit in cache " << i << " in cycle " << cycle << endl;
+
                         }
                     } else {
                         if (op == operation::R) {
                             cache->read_miss(address, bus, caches);
+                            cout<<"Read mis in cache " << i << " in cycle " << cycle << endl;
+
                         } else { 
                             cache->write_miss(address, bus, caches);
+                            cout<<"write miss in cache " << i << " in cycle " << cycle << endl;
+
                         }
                     }
                     
@@ -573,9 +585,10 @@ int main(int argc, char* argv[]) {
                         cache->waiting_time = 0;
                     }
                 }
-            }else{
-                cache->stats.idle_cycles++;
             }
+            // }else{
+            //     cache->stats.idle_cycles++;
+            // }
             
         }
     }
