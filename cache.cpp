@@ -226,8 +226,7 @@ public:
 
     void write_hit(const string& address, Bus& bus, vector<Cache*>& caches) {
         
-        stall_flag = false;
-        bus.invalidation = false;
+        
         Bits bits = parse(address);
         int index = bits.index_bits;
         int tag = bits.tag_bits;
@@ -247,6 +246,12 @@ public:
             stats.instructions++;
             stats.writes++;
             stats.execution_cycles++;
+            bus.invalidation = false;
+            is_active = true;
+            waiting_time = 0;
+            stall_flag = false;
+            return;
+
         }else if (state == CacheState::S) {
             if (bus.busy) {
                 stats.idle_cycles++;
@@ -283,13 +288,13 @@ public:
 
     void read_miss(const string& address, Bus& bus, vector<Cache*>& caches) {
         
-        bus.invalidation = false;
         if (bus.busy) {
             stall_flag = true;
             stats.idle_cycles++;
             return;
         }
         
+        bus.invalidation = false;
         Bits bits = parse(address);
         int index = bits.index_bits;
         int tag = bits.tag_bits;
@@ -359,13 +364,13 @@ public:
 
     void write_miss(const string& address, Bus& bus, vector<Cache*>& caches) {
         
-        bus.invalidation = false;
         if (bus.busy) {
             stall_flag = true;
             stats.idle_cycles++;
             return;
         }
         
+        bus.invalidation = false;
         Bits bits = parse(address);
         int index = bits.index_bits;
         int tag = bits.tag_bits;
@@ -425,6 +430,8 @@ public:
         bus.busy = false;
         bus.cycle_remaining = 0;
         is_active = true;
+        stall_flag = false;
+        waiting_time = 0;
         // Complete the state transition for write_hit on Shared state
         if (bus.invalidation) {
             int way = find_way(index, tag);
@@ -462,11 +469,15 @@ public:
         if (old_state != CacheState::I){
             stats.cache_evictions++;
         }
+
         tag_array[index][replace_way] = make_tuple(tag, bus.set_state, current_instruction_number);
+
 
         if (bus.transaction_type == Bus::CACHE_TO_CACHE) {
             // Now schedule the write-back
+            bus.busy = true;
             bus.transaction_type = Bus::WRITE_BACK;
+            bus.target_cache = -1;
             bus.cycle_remaining = 100; // Write-back to memory
             bus.traffic += blocksize_in_bytes;
             bus.transactions++;
@@ -475,15 +486,7 @@ public:
             // Keep bus busy for write-back
             return;
         } else if (bus.transaction_type == Bus::WRITE_BACK) {
-            // Write-back done, reset bus state
-            bus.transaction_type = Bus::NONE;
-            bus.pending_writeback_cache = -1;
-            bus.busy = false;
-            bus.cycle_remaining = 0;
-            bus.target_cache = -1;
-            bus.address = "";
-            bus.invalidation = false;
-            return;
+            cerr<<"it should not have any target cache"<<endl;
         }
     }
 
@@ -548,7 +551,6 @@ int main(int argc, char* argv[]) {
     while (!all_done) {
         cycle++;
         all_done = true;
-        
         // Process bus
         if (bus.busy) {
             bus.cycle_remaining--;
@@ -562,6 +564,7 @@ int main(int argc, char* argv[]) {
                     bus.target_cache = -1;
                     bus.address = "";
                     bus.invalidation = false;
+                    bus.transaction_type=Bus::NONE;
                 }
             }
         }
@@ -584,21 +587,14 @@ int main(int argc, char* argv[]) {
                     if (result == miss_or_hit::HIT) {
                         if (op == operation::R) {
                             cache->read_hit(address, bus );
-                            cout<<"Read hit in cache " << i << " in cycle " << cycle << endl;
                         } else { 
                             cache->write_hit(address, bus, caches);
-                            cout<<"write hit in cache " << i << " in cycle " << cycle << endl;
-
                         }
                     } else {
                         if (op == operation::R) {
                             cache->read_miss(address, bus, caches);
-                            cout<<"Read mis in cache " << i << " in cycle " << cycle << endl;
-
                         } else { 
                             cache->write_miss(address, bus, caches);
-                            cout<<"write miss in cache " << i << " in cycle " << cycle << endl;
-
                         }
                     }
                     

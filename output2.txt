@@ -1,0 +1,53 @@
+==================== SIMULATION STATISTICS =====================
+******** Program execution completed ******** in 62598366cycles ********
+============ Simulation results (Cache 0) ============
+01. number of instructions:            3270409
+02. number of reads:                   2380720
+03. number of writes:                  889689
+04. number of execution cycles:        3454581
+05. number of idle cycles:             34383719
+06. number of cache misses:            184172
+07. cache miss rate:                   5.63%
+08. number of cache evictions:         184105
+09. number of write backs:             40410
+10. number of invalidations:           277
+11. data traffic in bytes:             7190208
+============ Simulation results (Cache 1) ============
+01. number of instructions:            3287356
+02. number of reads:                   2388005
+03. number of writes:                  899351
+04. number of execution cycles:        3471340
+05. number of idle cycles:             40288194
+06. number of cache misses:            183984
+07. cache miss rate:                   5.60%
+08. number of cache evictions:         183712
+09. number of write backs:             47044
+10. number of invalidations:           104
+11. data traffic in bytes:             7396736
+============ Simulation results (Cache 2) ============
+01. number of instructions:            117707
+02. number of reads:                   74523
+03. number of writes:                  43184
+04. number of execution cycles:        125967
+05. number of idle cycles:             26645792
+06. number of cache misses:            8260
+07. cache miss rate:                   7.02%
+08. number of cache evictions:         8127
+09. number of write backs:             15408
+10. number of invalidations:           9
+11. data traffic in bytes:             757856
+============ Simulation results (Cache 3) ============
+01. number of instructions:            3324921
+02. number of reads:                   2416052
+03. number of writes:                  908869
+04. number of execution cycles:        3509755
+05. number of idle cycles:             59088610
+06. number of cache misses:            184834
+07. cache miss rate:                   5.56%
+08. number of cache evictions:         184686
+09. number of write backs:             27668
+10. number of invalidations:           2
+11. data traffic in bytes:             6800576
+==================== BUS STATISTICS =============================
+01. number of transactions:            643995
+02. data traffic in bytes:             20595296
