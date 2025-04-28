@@ -123,7 +123,7 @@ public:
             ss >> op_char >> hex_address;
 
             operation op = (op_char == 'R') ? operation::R : operation::W;
-
+            hex_address = hex_address.substr(2); // Remove "0x" prefix
             if (hex_address.length() < 8) {
                 hex_address = string(8 - hex_address.length(), '0') + hex_address;
             }
@@ -153,15 +153,16 @@ public:
     }
 
     struct Bits parse(string address) {
+
         // Convert hexadecimal string to integer
         unsigned long addr = stoul(address, nullptr, 16);
         
         struct Bits bits;
-        bits.offset_bits = addr & ((1 << offset_bits) - 1);
-        addr >>= offset_bits;
-        bits.index_bits = addr & ((1 << set_bits) - 1);
-        addr >>= set_bits;
-        bits.tag_bits = addr;
+        bits.offset_bits = addr & ((1 << offset_bits) - 1); // Extract offset bits
+        addr >>= offset_bits; // Shift right by offset bits
+        bits.index_bits = addr & ((1 << set_bits) - 1); // Extract index bits
+        addr >>= set_bits; // Shift right by index bits
+        bits.tag_bits = addr; // Remaining bits are tag bits
         return bits;
     }
 
@@ -276,7 +277,6 @@ public:
                 }
             }
             bus.transactions++;
-            stats.instructions++;
             stats.writes++;
             stats.execution_cycles++;
             stats.bus_invalidations++;
@@ -360,6 +360,7 @@ public:
         stats.execution_cycles++;
         stats.cache_misses++;
         stall_flag = true;
+        stats.reads++;
     }
 
     void write_miss(const string& address, Bus& bus, vector<Cache*>& caches) {
@@ -420,6 +421,7 @@ public:
         stats.cache_misses++;
         stats.execution_cycles++;
         stall_flag=true;
+        stats.writes++;
     }
 
     void handle_bus_transaction_completion(Bus& bus, vector<Cache*>& caches) {
@@ -439,6 +441,8 @@ public:
                 auto& [stored_tag, state, ts] = tag_array[index][way];
                 if (state == CacheState::S) {
                     tag_array[index][way] = make_tuple(tag, CacheState::M, current_instruction_number);
+                    stats.execution_cycles++;
+                    current_instruction_number++;
                     return;
                 }else{
                     cerr << "Error: state should have been S when issuing invalidate" << endl;
@@ -484,10 +488,14 @@ public:
             caches[bus.pending_writeback_cache]->stats.data_traffic_in_bytes += blocksize_in_bytes;
             caches[bus.pending_writeback_cache]->stats.write_back++;
             // Keep bus busy for write-back
-            return;
+            
         } else if (bus.transaction_type == Bus::WRITE_BACK) {
             cerr<<"it should not have any target cache"<<endl;
         }
+        stats.execution_cycles++;
+        current_instruction_number++;
+        stats.instructions++;
+
     }
 
 };
@@ -572,7 +580,6 @@ int main(int argc, char* argv[]) {
         // Process each cache
         for (int i = 0; i < 4; i++) {
             Cache* cache = caches[i];
-            
             // Check if any trace operations remain
             if (cache->current_instruction_number < cache->trace_data.size()) {
                 all_done = false;
@@ -581,7 +588,6 @@ int main(int argc, char* argv[]) {
                     auto [op, address] = cache->trace_data[cache->current_instruction_number];
                     Bits bits = cache->parse(address);
                     miss_or_hit result = cache->hit_or_miss(bits);
-                    
                     cache->stall_flag = false;
                     
                     if (result == miss_or_hit::HIT) {
@@ -627,7 +633,22 @@ int main(int argc, char* argv[]) {
         }
     }
     
+
+    cout << "==================== SIMULATION PARAMETERS ======================" << endl;
+    cout << "01. Trace Prefix:                      " << tracefile << endl;
+    cout << "02. Set Index Bits:                    " << s << endl;
+    cout << "03. Associativity:                     " << E << endl;
+    cout << "04. Block Bits:                        " << b << endl;
+    cout << "05. Block Size (Bytes):                " << (1 << b) << endl;
+    cout << "06. Number of Sets:                    " << (1 << s) << endl;
+    cout << "07. Cache Size (KB per core):          " << ((1 << s) * E * (1 << b)) / 1024 << " KB" << endl;
+    cout << "08. MESI Protocol:                     Enabled" << endl;
+    cout << "09. Write Policy:                      Write-back, Write-allocate" << endl;
+    cout << "10. Replacement Policy:                LRU" << endl;
+    cout << "11. Bus:                               Central snooping bus" << endl;
+   cout<<endl;
     cout << "==================== SIMULATION STATISTICS =====================" << endl;
+    
     cout << "******** Program execution completed ******** in " << cycle << "cycles ********"<< endl;
     // Print statistics
     for (int i = 0; i < 4; i++) {
