@@ -465,14 +465,15 @@ public:
             bus.cycle_remaining = 100;
             bus.address = bus.address;
             bus.invalidation = false;
-            waiting_time = 0;
+            waiting_time = 100;
+            is_active = false;
+            stall_flag = true;
+            bus.target_cache = cache_id;
             bus.busy=true;
-
-        }
-        if (old_state == CacheState::M){
             stats.cache_evictions++;
+            tag_array[index][replace_way] = make_tuple(tag, CacheState::I, current_instruction_number);            return;
         }
-
+        
         tag_array[index][replace_way] = make_tuple(tag, bus.set_state, current_instruction_number);
 
 
