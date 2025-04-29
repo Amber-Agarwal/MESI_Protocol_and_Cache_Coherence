@@ -348,7 +348,6 @@ public:
             bus.traffic += blocksize_in_bytes;
             bus.transactions++;
             caches[source_cache]->stats.data_traffic_in_bytes += blocksize_in_bytes;
-            caches[source_cache]->stats.write_back++;
         } else {
             bus.set_state = CacheState::E;
             bus.cycle_remaining = 100;
@@ -470,7 +469,7 @@ public:
             bus.busy=true;
 
         }
-        if (old_state != CacheState::I){
+        if (old_state == CacheState::M){
             stats.cache_evictions++;
         }
 
@@ -608,7 +607,7 @@ int main(int argc, char* argv[]) {
                         cache->current_instruction_number++;
                     }
                 } else {
-                    cache->stats.idle_cycles++;
+                    cache->stats.execution_cycles++;
                     cache->waiting_time--;
                     if (cache->waiting_time <= 0) {
                         cache->is_active = true;
@@ -617,10 +616,6 @@ int main(int argc, char* argv[]) {
                     }
                 }
             }
-            // }else{
-            //     cache->stats.idle_cycles++;
-            // }
-            
         }
     }
     
