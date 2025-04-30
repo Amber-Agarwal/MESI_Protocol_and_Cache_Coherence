@@ -1,0 +1,70 @@
+==================== SIMULATION PARAMETERS ======================
+01. Trace Prefix:                      app2
+02. Set Index Bits:                    6
+03. Associativity:                     2
+04. Block Bits:                        5
+05. Block Size (Bytes):                32
+06. Number of Sets:                    64
+07. Cache Size (KB per core):          4 KB
+08. MESI Protocol:                     Enabled
+09. Write Policy:                      Write-back, Write-allocate
+10. Replacement Policy:                LRU
+11. Bus:                               Central snooping bus
+
+==================== SIMULATION STATISTICS =====================
+******** Program execution completed ******** in 63041847cycles ********
+============ Simulation results (Cache 0) ============
+01. number of instructions:            3270049
+02. number of reads:                   2380720
+03. number of writes:                  889412
+04. number of execution cycles:        22767232
+05. number of idle cycles:             16381810
+06. number of cache misses:            184169
+07. cache miss rate:                   5.63%
+08. number of cache evictions:         184014
+09. number of write backs:             26199
+10. number of invalidations:           191
+11. data traffic in bytes:             7224320
+12. total cycles                       39149042
+============ Simulation results (Cache 1) ============
+01. number of instructions:            3287156
+02. number of reads:                   2388005
+03. number of writes:                  899247
+04. number of execution cycles:        22715595
+05. number of idle cycles:             20195196
+06. number of cache misses:            183982
+07. cache miss rate:                   5.60%
+08. number of cache evictions:         183696
+09. number of write backs:             27540
+10. number of invalidations:           125
+11. data traffic in bytes:             7353536
+12. total cycles                       42910791
+============ Simulation results (Cache 2) ============
+01. number of instructions:            117677
+02. number of reads:                   74523
+03. number of writes:                  43175
+04. number of execution cycles:        1099348
+05. number of idle cycles:             20942764
+06. number of cache misses:            8259
+07. cache miss rate:                   7.02%
+08. number of cache evictions:         8121
+09. number of write backs:             2823
+10. number of invalidations:           23
+11. data traffic in bytes:             768960
+12. total cycles                       22042112
+============ Simulation results (Cache 3) ============
+01. number of instructions:            3324912
+02. number of reads:                   2416052
+03. number of writes:                  908867
+04. number of execution cycles:        23080062
+05. number of idle cycles:             39961785
+06. number of cache misses:            184834
+07. cache miss rate:                   5.56%
+08. number of cache evictions:         184669
+09. number of write backs:             25731
+10. number of invalidations:           16
+11. data traffic in bytes:             6810720
+12. total cycles                       63041847
+==================== BUS STATISTICS =============================
+01. number of transactions:            643537
+02. data traffic in bytes:             20593184
