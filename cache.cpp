@@ -354,7 +354,7 @@ public:
             bus.transactions++;
         }
         stats.data_traffic_in_bytes += blocksize_in_bytes;
-        stats.execution_cycles++;
+        // stats.execution_cycles++;
         stats.cache_misses++;
         stall_flag = true;
         stats.reads++;
@@ -421,7 +421,7 @@ public:
         
         stats.data_traffic_in_bytes += blocksize_in_bytes;
         stats.cache_misses++;
-        stats.execution_cycles++;
+        // stats.execution_cycles++;
 
         stall_flag=true;
         stats.writes++;
@@ -502,8 +502,6 @@ public:
             cerr<<"it should not have any target cache"<<endl;
         }
         stats.execution_cycles++;
-        current_instruction_number++;
-        stats.instructions++;
 
     }
 
@@ -567,6 +565,7 @@ int main(int argc, char* argv[]) {
     
     while (!all_done) {
         cycle++;
+
         all_done = true;
         // Process bus
         if (bus.busy) {
@@ -662,12 +661,14 @@ int main(int argc, char* argv[]) {
     cout << "******** Program execution completed ******** in " << cycle << "cycles ********"<< endl;
     // Print statistics
     for (int i = 0; i < 4; i++) {
+        
         Cache* cache = caches[i];
         float miss_rate = 0.0;
         if (cache->stats.reads + cache->stats.writes > 0) {
             miss_rate = (cache->stats.cache_misses * 100.0) / (cache->stats.reads + cache->stats.writes);
         }
         
+        if(cache->stats.execution_cycles!=0){cache->stats.execution_cycles++;}
         cout << "============ Simulation results (Cache " << i << ") ============" << endl;
         cout << "01. number of instructions:            " << cache->stats.instructions << endl;
         cout << "02. number of reads:                   " << cache->stats.reads << endl;
