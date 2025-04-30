@@ -276,9 +276,7 @@ public:
                     }
                 }
             }
-            bus.transactions++;
             stats.writes++;
-            stats.execution_cycles++;
             stats.bus_invalidations++;
         }else{
             cerr << "Error: Invalid state in write_hit" << endl;
@@ -376,6 +374,7 @@ public:
         int tag = bits.tag_bits;
         
         bool writing_back = false;
+        bool invalidated = false;
         for (int i = 0; i < caches.size(); i++) {
             if (i == cache_id) continue;
             
@@ -383,6 +382,7 @@ public:
             int other_way = other_cache->find_way(index, tag);
             
             if (other_way != -1) {
+                invalidated = true;
                 auto& [stored_tag, state, ts] = other_cache->tag_array[index][other_way];
                 if (state == CacheState::I) {
                     continue; // Invalid state, skip
@@ -394,6 +394,9 @@ public:
             }
         }
         
+        if(invalidated){
+            stats.bus_invalidations++;
+        }
         // Start bus transaction
         bus.busy = true;
         bus.target_cache = cache_id;
@@ -419,6 +422,7 @@ public:
         stats.data_traffic_in_bytes += blocksize_in_bytes;
         stats.cache_misses++;
         stats.execution_cycles++;
+
         stall_flag=true;
         stats.writes++;
     }
@@ -471,7 +475,12 @@ public:
             bus.target_cache = cache_id;
             bus.busy=true;
             stats.cache_evictions++;
-            tag_array[index][replace_way] = make_tuple(tag, CacheState::I, current_instruction_number);            return;
+            tag_array[index][replace_way] = make_tuple(tag, CacheState::I, current_instruction_number);            
+            return;
+        }
+        
+        if(old_state != CacheState::I){
+            stats.cache_evictions++;
         }
         
         tag_array[index][replace_way] = make_tuple(tag, bus.set_state, current_instruction_number);
@@ -566,6 +575,7 @@ int main(int argc, char* argv[]) {
                 // Bus transaction complete
                 if (bus.target_cache >= 0) {
                     caches[bus.target_cache]->handle_bus_transaction_completion(bus, caches);
+                    // cout<<"cache "<<bus.target_cache<<"did execution in cycle"<<cycle<<"has instruction"<<caches[bus.target_cache]->stats.execution_cycles<<endl;
                 }else{
                     bus.busy = false;
                     bus.cycle_remaining = 0;
@@ -592,14 +602,18 @@ int main(int argc, char* argv[]) {
                     
                     if (result == miss_or_hit::HIT) {
                         if (op == operation::R) {
+                            // cout<<"Cache " << cache->cache_id << " read hit in cycle " << cycle << endl;
                             cache->read_hit(address, bus );
                         } else { 
+                            // cout<<"Cache " << cache->cache_id << " write hit in cycle " << cycle << endl;
                             cache->write_hit(address, bus, caches);
                         }
                     } else {
                         if (op == operation::R) {
+                            // cout<<"Cache " << cache->cache_id << " read miss in cycle " << cycle << endl;
                             cache->read_miss(address, bus, caches);
                         } else { 
+                            // cout<<"Cache " << cache->cache_id << " write miss in cycle " << cycle << endl;
                             cache->write_miss(address, bus, caches);
                         }
                     }
@@ -609,10 +623,10 @@ int main(int argc, char* argv[]) {
                     }
                 } else {
                     cache->stats.execution_cycles++;
+                    // cout<<"cache " << cache->cache_id << "did execution in " << cycle << "and has "<<cache->stats.execution_cycles<<" instructions"<<endl;
                     cache->waiting_time--;
                     if (cache->waiting_time <= 0) {
                         cache->is_active = true;
-                        cerr<<"it should not be here"<<endl;
                         cache->waiting_time = 0;
                     }
                 }
@@ -665,7 +679,8 @@ int main(int argc, char* argv[]) {
         cout << "08. number of cache evictions:         " << cache->stats.cache_evictions << endl;
         cout << "09. number of write backs:             " << cache->stats.write_back << endl;
         cout << "10. number of invalidations:           " << cache->stats.bus_invalidations << endl;
-        cout << "11. data traffic in bytes:             " << cache->stats.data_traffic_in_bytes << endl;        
+        cout << "11. data traffic in bytes:             " << cache->stats.data_traffic_in_bytes << endl;  
+        cout << "12. total cycles                       " << cache->stats.execution_cycles+cache->stats.idle_cycles << endl;
         // Write to output file if open
         if (outfile.is_open()) {
             // eventually write to the file
@@ -681,6 +696,8 @@ int main(int argc, char* argv[]) {
             outfile << "09. number of write backs:             " << cache->stats.write_back << endl;
             outfile << "10. number of invalidations:           " << cache->stats.bus_invalidations << endl;
             outfile << "11. data traffic in bytes:             " << cache->stats.data_traffic_in_bytes << endl;
+            outfile << "12. total cycles                       " << cache->stats.execution_cycles+cache->stats.idle_cycles << endl;
+            
         }
     }
     
