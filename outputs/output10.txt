@@ -12,59 +12,59 @@
 11. Bus:                               Central snooping bus
 
 ==================== SIMULATION STATISTICS =====================
-******** Program execution completed ******** in 1cycles ********
+******** Program execution completed ******** in 401cycles ********
 ============ Simulation results (Cache 0) ============
-01. number of instructions:            0
+01. number of instructions:            1
 02. number of reads:                   0
-03. number of writes:                  0
-04. number of execution cycles:        0
+03. number of writes:                  1
+04. number of execution cycles:        101
 05. number of idle cycles:             0
-06. number of cache misses:            0
-07. cache miss rate:                   0.00%
+06. number of cache misses:            1
+07. cache miss rate:                   100.00%
 08. number of cache evictions:         0
 09. number of write backs:             0
 10. number of invalidations:           0
-11. data traffic in bytes:             0
-12. total cycles                       0
+11. data traffic in bytes:             32
+12. total cycles                       101
 ============ Simulation results (Cache 1) ============
-01. number of instructions:            0
+01. number of instructions:            1
 02. number of reads:                   0
-03. number of writes:                  0
-04. number of execution cycles:        0
-05. number of idle cycles:             0
-06. number of cache misses:            0
-07. cache miss rate:                   0.00%
+03. number of writes:                  1
+04. number of execution cycles:        101
+05. number of idle cycles:             100
+06. number of cache misses:            1
+07. cache miss rate:                   100.00%
 08. number of cache evictions:         0
 09. number of write backs:             0
-10. number of invalidations:           0
-11. data traffic in bytes:             0
-12. total cycles                       0
+10. number of invalidations:           1
+11. data traffic in bytes:             32
+12. total cycles                       201
 ============ Simulation results (Cache 2) ============
-01. number of instructions:            0
+01. number of instructions:            1
 02. number of reads:                   0
-03. number of writes:                  0
-04. number of execution cycles:        0
-05. number of idle cycles:             0
-06. number of cache misses:            0
-07. cache miss rate:                   0.00%
+03. number of writes:                  1
+04. number of execution cycles:        101
+05. number of idle cycles:             200
+06. number of cache misses:            1
+07. cache miss rate:                   100.00%
 08. number of cache evictions:         0
 09. number of write backs:             0
 10. number of invalidations:           0
-11. data traffic in bytes:             0
-12. total cycles                       0
+11. data traffic in bytes:             32
+12. total cycles                       301
 ============ Simulation results (Cache 3) ============
-01. number of instructions:            0
+01. number of instructions:            1
 02. number of reads:                   0
-03. number of writes:                  0
-04. number of execution cycles:        0
-05. number of idle cycles:             0
-06. number of cache misses:            0
-07. cache miss rate:                   0.00%
+03. number of writes:                  1
+04. number of execution cycles:        101
+05. number of idle cycles:             300
+06. number of cache misses:            1
+07. cache miss rate:                   100.00%
 08. number of cache evictions:         0
 09. number of write backs:             0
-10. number of invalidations:           0
-11. data traffic in bytes:             0
-12. total cycles                       0
+10. number of invalidations:           1
+11. data traffic in bytes:             32
+12. total cycles                       401
 ==================== BUS STATISTICS =============================
-01. number of transactions:            0
-02. data traffic in bytes:             0
+01. number of transactions:            4
+02. data traffic in bytes:             128
