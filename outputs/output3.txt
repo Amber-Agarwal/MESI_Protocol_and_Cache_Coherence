@@ -12,59 +12,59 @@
 11. Bus:                               Central snooping bus
 
 ==================== SIMULATION STATISTICS =====================
-******** Program execution completed ******** in 117cycles ********
+******** Program execution completed ******** in 701cycles ********
 ============ Simulation results (Cache 0) ============
-01. number of instructions:            3
-02. number of reads:                   2
-03. number of writes:                  1
-04. number of execution cycles:        103
-05. number of idle cycles:             0
-06. number of cache misses:            1
-07. cache miss rate:                   33.33%
-08. number of cache evictions:         0
-09. number of write backs:             1
-10. number of invalidations:           0
-11. data traffic in bytes:             96
-12. total cycles                       103
-============ Simulation results (Cache 1) ============
 01. number of instructions:            1
-02. number of reads:                   1
-03. number of writes:                  0
-04. number of execution cycles:        17
-05. number of idle cycles:             100
+02. number of reads:                   0
+03. number of writes:                  1
+04. number of execution cycles:        101
+05. number of idle cycles:             0
 06. number of cache misses:            1
 07. cache miss rate:                   100.00%
 08. number of cache evictions:         0
 09. number of write backs:             0
 10. number of invalidations:           0
 11. data traffic in bytes:             32
-12. total cycles                       117
+12. total cycles                       101
+============ Simulation results (Cache 1) ============
+01. number of instructions:            1
+02. number of reads:                   0
+03. number of writes:                  1
+04. number of execution cycles:        201
+05. number of idle cycles:             100
+06. number of cache misses:            1
+07. cache miss rate:                   100.00%
+08. number of cache evictions:         0
+09. number of write backs:             1
+10. number of invalidations:           1
+11. data traffic in bytes:             64
+12. total cycles                       301
 ============ Simulation results (Cache 2) ============
-01. number of instructions:            0
+01. number of instructions:            1
 02. number of reads:                   0
-03. number of writes:                  0
-04. number of execution cycles:        0
-05. number of idle cycles:             0
-06. number of cache misses:            0
-07. cache miss rate:                   0.00%
+03. number of writes:                  1
+04. number of execution cycles:        201
+05. number of idle cycles:             300
+06. number of cache misses:            1
+07. cache miss rate:                   100.00%
 08. number of cache evictions:         0
-09. number of write backs:             0
-10. number of invalidations:           0
-11. data traffic in bytes:             0
-12. total cycles                       0
+09. number of write backs:             1
+10. number of invalidations:           1
+11. data traffic in bytes:             64
+12. total cycles                       501
 ============ Simulation results (Cache 3) ============
-01. number of instructions:            0
+01. number of instructions:            1
 02. number of reads:                   0
-03. number of writes:                  0
-04. number of execution cycles:        0
-05. number of idle cycles:             0
-06. number of cache misses:            0
-07. cache miss rate:                   0.00%
+03. number of writes:                  1
+04. number of execution cycles:        201
+05. number of idle cycles:             500
+06. number of cache misses:            1
+07. cache miss rate:                   100.00%
 08. number of cache evictions:         0
-09. number of write backs:             0
-10. number of invalidations:           0
-11. data traffic in bytes:             0
-12. total cycles                       0
+09. number of write backs:             1
+10. number of invalidations:           1
+11. data traffic in bytes:             64
+12. total cycles                       701
 ==================== BUS STATISTICS =============================
-01. number of transactions:            3
-02. data traffic in bytes:             96
+01. number of transactions:            7
+02. data traffic in bytes:             224

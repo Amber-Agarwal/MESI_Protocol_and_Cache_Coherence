@@ -17,7 +17,7 @@
 01. number of instructions:            4
 02. number of reads:                   3
 03. number of writes:                  1
-04. number of execution cycles:        404
+04. number of execution cycles:        401
 05. number of idle cycles:             0
 06. number of cache misses:            4
 07. cache miss rate:                   100.00%
@@ -25,9 +25,9 @@
 09. number of write backs:             0
 10. number of invalidations:           0
 11. data traffic in bytes:             224
-12. total cycles                       404
+12. total cycles                       401
 ============ Simulation results (Cache 1) ============
-01. number of instructions:            1
+01. number of instructions:            2
 02. number of reads:                   1
 03. number of writes:                  1
 04. number of execution cycles:        18
@@ -40,7 +40,7 @@
 11. data traffic in bytes:             32
 12. total cycles                       418
 ============ Simulation results (Cache 2) ============
-01. number of instructions:            1
+01. number of instructions:            2
 02. number of reads:                   1
 03. number of writes:                  1
 04. number of execution cycles:        18
@@ -53,7 +53,7 @@
 11. data traffic in bytes:             32
 12. total cycles                       435
 ============ Simulation results (Cache 3) ============
-01. number of instructions:            1
+01. number of instructions:            2
 02. number of reads:                   1
 03. number of writes:                  1
 04. number of execution cycles:        18
