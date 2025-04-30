@@ -278,6 +278,7 @@ public:
             }
             stats.writes++;
             stats.bus_invalidations++;
+            stats.execution_cycles++;
         }else{
             cerr << "Error: Invalid state in write_hit" << endl;
             return;
@@ -382,15 +383,15 @@ public:
             int other_way = other_cache->find_way(index, tag);
             
             if (other_way != -1) {
-                invalidated = true;
                 auto& [stored_tag, state, ts] = other_cache->tag_array[index][other_way];
                 if (state == CacheState::I) {
                     continue; // Invalid state, skip
                 }
-                other_cache->tag_array[index][other_way] = make_tuple(stored_tag, CacheState::I, ts);
+                invalidated = true;
                 if (state == CacheState::M) {
                     writing_back = true;
                 }
+                other_cache->tag_array[index][other_way] = make_tuple(stored_tag, CacheState::I, ts);
             }
         }
         
@@ -444,8 +445,8 @@ public:
                 auto& [stored_tag, state, ts] = tag_array[index][way];
                 if (state == CacheState::S) {
                     tag_array[index][way] = make_tuple(tag, CacheState::M, current_instruction_number);
-                    stats.execution_cycles++;
                     current_instruction_number++;
+                    
                     return;
                 }else{
                     cerr << "Error: state should have been S when issuing invalidate" << endl;
@@ -501,7 +502,7 @@ public:
         } else if (bus.transaction_type == Bus::WRITE_BACK) {
             cerr<<"it should not have any target cache"<<endl;
         }
-        stats.execution_cycles++;
+        // stats.execution_cycles++;
         current_instruction_number++;
         stats.instructions++;
 
@@ -574,8 +575,8 @@ int main(int argc, char* argv[]) {
             if (bus.cycle_remaining <= 0) {
                 // Bus transaction complete
                 if (bus.target_cache >= 0) {
-                    caches[bus.target_cache]->handle_bus_transaction_completion(bus, caches);
                     // cout<<"cache "<<bus.target_cache<<"did execution in cycle"<<cycle<<"has instruction"<<caches[bus.target_cache]->stats.execution_cycles<<endl;
+                    caches[bus.target_cache]->handle_bus_transaction_completion(bus, caches);
                 }else{
                     bus.busy = false;
                     bus.cycle_remaining = 0;
@@ -664,6 +665,10 @@ int main(int argc, char* argv[]) {
     for (int i = 0; i < 4; i++) {
         Cache* cache = caches[i];
         float miss_rate = 0.0;
+        cache->stats.instructions = cache->stats.reads+cache->stats.writes;
+        if(cache->stats.execution_cycles){
+            cache->stats.execution_cycles++;
+        }
         if (cache->stats.reads + cache->stats.writes > 0) {
             miss_rate = (cache->stats.cache_misses * 100.0) / (cache->stats.reads + cache->stats.writes);
         }
