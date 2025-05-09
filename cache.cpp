@@ -46,6 +46,9 @@ struct Bus {
     CacheState set_state;
 
     int transactions=0;
+    int BusRd = 0;
+    int BusRdX = 0;
+    int BusInv = 0;
     int traffic=0;
 
     // Extend Bus struct to support multi-step transactions
@@ -267,6 +270,7 @@ public:
             bus.target_cache = cache_id;
             bus.address = address;
             bus.invalidation = true;
+            bus.BusInv++;
             for (auto& cache : caches) {
                 if (cache->cache_id != cache_id) {
                     int other_way = cache->find_way(index, tag);
@@ -293,6 +297,7 @@ public:
             return;
         }
         
+        bus.BusRd++;
         bus.invalidation = false;
         Bits bits = parse(address);
         int index = bits.index_bits;
@@ -336,7 +341,7 @@ public:
             bus.cycle_remaining = blocksize_in_bytes/2;
             waiting_time = blocksize_in_bytes/2;
             bus.traffic += blocksize_in_bytes;
-            bus.transactions++;
+            
             caches[source_cache]->stats.data_traffic_in_bytes += blocksize_in_bytes;
             // Set up for second transaction (write-back)
             bus.transaction_type = Bus::CACHE_TO_CACHE;
@@ -345,14 +350,14 @@ public:
             bus.cycle_remaining = blocksize_in_bytes/2; // 1 cycle for read
             waiting_time = blocksize_in_bytes/2;
             bus.traffic += blocksize_in_bytes;
-            bus.transactions++;
+            
             caches[source_cache]->stats.data_traffic_in_bytes += blocksize_in_bytes;
         } else {
             bus.set_state = CacheState::E;
             bus.cycle_remaining = 100;
             waiting_time = 100;
             bus.traffic += blocksize_in_bytes;
-            bus.transactions++;
+            
         }
         stats.data_traffic_in_bytes += blocksize_in_bytes;
         stats.execution_cycles++;
@@ -376,6 +381,7 @@ public:
         
         bool writing_back = false;
         bool invalidated = false;
+        bus.BusRdX++;
         for (int i = 0; i < caches.size(); i++) {
             if (i == cache_id) continue;
             
@@ -407,17 +413,16 @@ public:
         is_active = false;
         bus.set_state = CacheState::M;
         if(writing_back) {
+            bus.BusRdX++;
             bus.cycle_remaining = 200; // 2 cycles for write
             waiting_time = 200;
             bus.traffic += 2 * blocksize_in_bytes;
-            bus.transactions += 2;
             caches[bus.target_cache]->stats.data_traffic_in_bytes +=  blocksize_in_bytes;
             caches[bus.target_cache]->stats.write_back++;
         } else{
             bus.cycle_remaining = 100;
             waiting_time = 100;
             bus.traffic += blocksize_in_bytes;
-            bus.transactions++;
         }
         
         stats.data_traffic_in_bytes += blocksize_in_bytes;
@@ -466,7 +471,6 @@ public:
             stats.write_back++;
             stats.data_traffic_in_bytes += blocksize_in_bytes;
             bus.traffic += blocksize_in_bytes;
-            bus.transactions++;
             bus.cycle_remaining = 100;
             bus.address = bus.address;
             bus.invalidation = false;
@@ -494,7 +498,6 @@ public:
             bus.target_cache = -1;
             bus.cycle_remaining = 100; // Write-back to memory
             bus.traffic += blocksize_in_bytes;
-            bus.transactions++;
             caches[bus.pending_writeback_cache]->stats.data_traffic_in_bytes += blocksize_in_bytes;
             caches[bus.pending_writeback_cache]->stats.write_back++;
             // Keep bus busy for write-back
@@ -707,7 +710,7 @@ int main(int argc, char* argv[]) {
     }
     
     cout << "==================== BUS STATISTICS =============================" << endl;
-    cout << "01. number of transactions:            " << bus.transactions << endl;
+    cout << "01. number of transactions:            " << bus.BusRd + bus.BusRdX + bus.BusInv << endl;
     cout << "02. data traffic in bytes:             " << bus.traffic << endl;
 
 

@@ -66,5 +66,5 @@
 11. data traffic in bytes:             32
 12. total cycles                       452
 ==================== BUS STATISTICS =============================
-01. number of transactions:            7
+01. number of transactions:            10
 02. data traffic in bytes:             224
