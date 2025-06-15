@@ -96,12 +96,12 @@ The simulator includes specific test cases demonstrating false sharing effects:
 
 ### Compilation
 ```bash
-g++ -o cache_simulator *.cpp -std=c++11
+make
 ```
 
-### Running the Simulator
+### Running the Simulator(To run the test cases given in traces folder use the run.sh bash script)
 ```bash
-./cache_simulator [trace_files] [cache_config_parameters]
+/run.sh
 ```
 
 ### Configuration Parameters
@@ -130,10 +130,10 @@ g++ -o cache_simulator *.cpp -std=c++11
 ## 📁 File Structure
 
 ```
-cache-simulator/
-├── src/                    # Source code files
+COL-216-ASSIGNMENT-3/
+├── outputs/                    # Output files for self made traces
 ├── traces/                 # Test trace files (App3-App10)
-├── results/               # Output files and performance graphs
+├── cache.cpp/               # Main code
 ├── Col_216_Assignment_3.pdf # Detailed project report
 └── README.md              # This file
 ```
