@@ -1,115 +1,184 @@
-Here’s a complete `README.md` file for your GitHub repository. It summarizes your project, structure, usage, and documentation clearly for any future reader or evaluator:
+# Cache Simulator with MESI Protocol
 
----
+A multi-core cache coherence simulator implementing the MESI (Modified, Exclusive, Shared, Invalid) protocol with a shared bus architecture.
 
-```markdown
-# COL216 Assignment 3 - Cache Simulator
+## 📋 Project Overview
 
-This repository contains the implementation and analysis for **Assignment 3** of the Computer Architecture course (COL216) at **IIT Delhi**, focusing on simulating a **4-core MESI-based cache-coherent multiprocessor system**.
+This project simulates a 4-core processor system with individual L1 caches connected via a shared bus. The simulator implements the MESI cache coherence protocol to maintain data consistency across all caches and provides detailed performance analysis through various cache configuration parameters.
 
-## 📄 Project Overview
+## 👥 Authors
 
-The simulator models:
-- A **4-core processor** system.
-- Each core has a private cache implementing the **MESI coherence protocol**.
-- A **shared snooping bus** that arbitrates memory requests.
-- Simulation is performed **cycle-by-cycle**, tracking execution time, stalls, and coherence events.
+- **Amber Agarwal** (2023CS50625)
+- **Anoop Singh** (2023CS10459)
 
-### Key Features:
-- Support for configurable:
-  - Cache sets
-  - Associativity
-  - Block offset size
-- Implements:
-  - Cache-to-cache transfers
-  - Bus contention
-  - Write-back and eviction logic
-  - Detailed performance statistics
+**Supervisor:** Prof. Rijurekha Sen  
+**Institution:** IIT Delhi, Department of Computer Science and Engineering
 
-## 📁 Repository Structure
+## 🏗️ Architecture
 
-```
+### Core Components
 
-├── src/                        # Source files (cache, bus, simulation logic)
-├── traces/                    # Provided test traces (App1 - App10)
-├── outputs/                   # Corresponding output files
-├── images/                    # Graphs and illustrations (used in report)
-├── Col\_216\_Assignment\_3.pdf   # 📘 Full report (includes flowcharts, observations)
-└── README.md                  # 📄 This file
+- **Cache**: Individual cache instances for each processor core
+- **Bus**: Shared communication medium for cache coherence
+- **MESI Protocol**: Cache coherence protocol implementation
+- **Statistics**: Performance monitoring and analysis
 
-````
+### Key Features
 
-## 📘 Report Summary
+- 4-core simulation with individual L1 caches
+- MESI cache coherence protocol
+- Shared bus with priority-based arbitration
+- LRU (Least Recently Used) replacement policy
+- Comprehensive performance statistics
+- Support for various cache configurations
 
-The full report is available as `Col_216_Assignment_3.pdf`, and includes:
-- Detailed class and structure descriptions (`Cache`, `Bus`, `Statistics`)
-- Execution rules and cache policies
-- Graphical analysis:
-  - Varying number of sets
-  - Varying associativity
-  - Varying block offset
-  - Fixed cache size with different set/assoc combinations
-- Observations on bus arbitration and performance bottlenecks
-- Case study on **False Sharing**
-- Per-trace behavior analysis (`App1` to `App10`)
-- A comprehensive **simulation flowchart**
+## 🔧 Implementation Details
 
-## 📊 Sample Results
+### Cache Structure
+- **Tag Array**: Stores tag, MESI state, and timestamp for each cache line
+- **Data Array**: Placeholder for actual data blocks
+- **Associativity**: Configurable set-associative cache
+- **Replacement Policy**: LRU-based eviction
 
-Some interesting findings:
-- **Core 3** consistently finishes last due to lowest bus priority.
-- **False Sharing** incurs ~300 cycle penalty compared to no-sharing version.
-- **App9** (read sharing) completes in only 149 cycles due to efficient cache-to-cache transfers.
-- **App10** (write sharing) suffers from repeated writebacks, adding ~300 cycles.
+### Bus Protocol
+- **Single shared bus** for all cache-to-cache and cache-to-memory transfers
+- **Priority-based arbitration**: Lower core ID gets higher priority
+- **Transaction types**: Data transfer, invalidation signals, coherence messages
 
-## 🚀 Running the Simulator
+### MESI States
+- **Modified (M)**: Cache line is dirty and exclusive to this cache
+- **Exclusive (E)**: Cache line is clean and exclusive to this cache
+- **Shared (S)**: Cache line may exist in multiple caches
+- **Invalid (I)**: Cache line is not valid
 
-### Prerequisites:
-- C++ compiler (e.g., `g++`)
-- C++11 or higher standard
+## 📊 Performance Analysis
 
-### Compile and Run:
+The simulator provides comprehensive analysis by varying:
+
+1. **Number of Cache Sets**: Impact of cache size on hit rates
+2. **Cache Associativity**: Effect of conflict resolution capabilities
+3. **Block Size (Offset Bits)**: Influence of spatial locality
+4. **Fixed Cache Size Trade-offs**: Sets vs. Associativity optimization
+
+### Key Metrics
+
+- **Execution Cycles**: Total cycles for instruction completion
+- **Idle Cycles**: Cycles spent waiting for bus access
+- **Cache Hits/Misses**: Cache performance indicators
+- **Bus Traffic**: Total data transferred via bus
+- **Write-backs**: Modified blocks written to memory
+- **Invalidations**: Cache coherence operations
+
+## 🧪 Test Cases
+
+### Included Test Applications
+
+- **App3**: Multiple cores writing to same location (write-back scenarios)
+- **App4**: Single-set cache stress test with invalidations
+- **App5**: Each core reads different blocks (sequential execution)
+- **App6**: Single core operation (isolated execution)
+- **App7/App8**: False sharing analysis and comparison
+- **App9**: Same location reads (cache-to-cache transfers)
+- **App10**: Same location writes (coherence overhead)
+
+### False Sharing Analysis
+
+The simulator includes specific test cases demonstrating false sharing effects:
+- **App7**: Causes false sharing with same cache line accesses
+- **App8**: Avoids false sharing with different cache line accesses
+- Performance difference: ~300 cycles due to unnecessary invalidations
+
+## 🚀 Usage
+
+### Prerequisites
+- C++ compiler with C++11 support
+- Make utility (optional)
+
+### Compilation
 ```bash
-g++ -std=c++11 -o simulator main.cpp
-./simulator <trace_file>
-````
+g++ -o cache_simulator *.cpp -std=c++11
+```
 
-Example:
-
+### Running the Simulator
 ```bash
-./simulator traces/app1.txt
+./cache_simulator [trace_files] [cache_config_parameters]
 ```
 
-### Output:
+### Configuration Parameters
+- Cache size (number of sets)
+- Associativity level
+- Block size (offset bits)
+- Memory access latency
+- Bus transfer latency
 
-The simulator generates detailed performance metrics for each core:
+## 📈 Results and Observations
 
-* Execution cycles
-* Idle cycles
-* Cache hits and misses
-* Bus traffic
-* Writebacks and evictions
-* Invalidations
+### Key Findings
 
-## 📎 Notes
+1. **Core Priority Impact**: Core 3 consistently shows highest execution cycles due to lowest bus priority
+2. **Deterministic Behavior**: Fixed conflict resolution ensures reproducible results
+3. **Cache Configuration Trade-offs**: Optimal performance depends on workload characteristics
+4. **False Sharing Penalty**: Significant performance degradation (~300 cycles) when present
 
-* The simulator uses **deterministic conflict resolution** → Same results across runs.
-* MESI protocol ensures coherence even under concurrent writes or reads.
-* LRU eviction and single-bus architecture model real-world multiprocessor constraints.
+### Performance Trends
 
-## 🧠 Authors
+- **Increasing Sets**: Generally reduces execution cycles through better hit rates
+- **Higher Associativity**: Improves conflict resolution but may increase access latency
+- **Larger Blocks**: Benefits sequential access patterns but may increase miss penalty
+- **Fixed Size Trade-off**: Sweet spot exists between sets and associativity
 
-* **Amber Agarwal** (2023CS50625)
-* **Anoop Singh** (2023CS10459)
-  Under the guidance of **Prof. Rijurekha Sen**
-
-## 🏛️ Institution
-
-Department of Computer Science and Engineering
-**Indian Institute of Technology, Delhi**
-
----
-
-📄 For complete implementation details and analysis, refer to [Col\_216\_Assignment\_3.pdf](./Col_216_Assignment_3.pdf)
+## 📁 File Structure
 
 ```
+cache-simulator/
+├── src/                    # Source code files
+├── traces/                 # Test trace files (App3-App10)
+├── results/               # Output files and performance graphs
+├── Col_216_Assignment_3.pdf # Detailed project report
+└── README.md              # This file
+```
+
+## 📊 Performance Graphs
+
+The simulator generates performance analysis graphs showing:
+- Execution cycles vs. number of sets
+- Performance impact of associativity changes
+- Block size optimization effects
+- Fixed cache size configuration trade-offs
+
+## 🔍 Bus Arbitration Rules
+
+1. **Priority Order**: Core 0 > Core 1 > Core 2 > Core 3
+2. **Conflict Resolution**: Lower ID core gets bus access first
+3. **State Transitions**: Sender updates immediately, receiver waits for data
+4. **Write-back Policy**: Modified blocks must be written back before eviction
+
+## 📝 Statistics Tracked
+
+- **Read/Write Operations**: Total memory access counts
+- **Cache Hits/Misses**: Performance indicators per core
+- **Bus Transactions**: Total bus usage statistics
+- **Idle Cycles**: Waiting time due to bus contention
+- **Data Traffic**: Total bytes transferred via bus
+- **Invalidations**: Cache coherence operation counts
+
+## 🎯 Educational Value
+
+This simulator serves as an excellent educational tool for understanding:
+- Cache coherence protocols (MESI)
+- Multi-core system design challenges
+- Performance impact of cache configurations
+- False sharing and its mitigation
+- Bus-based shared memory architectures
+
+## 📄 Documentation
+
+For detailed implementation details, assumptions, and comprehensive analysis, refer to the complete project report: `Col_216_Assignment_3.pdf`
+
+## 🤝 Contributing
+
+This project was developed as part of an academic assignment. For questions or suggestions, please refer to the original authors.
+
+## 📜 License
+
+This project is developed for educational purposes as part of coursework at IIT Delhi.
